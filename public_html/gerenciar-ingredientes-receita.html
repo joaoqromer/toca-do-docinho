@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Ingredientes por Receita</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            max-width: 800px;
+            margin: auto;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        select, input, button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #0073aa;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #005177;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .messages {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .error-message {
+            color: red;
+        }
+        .success-message {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gerenciar Ingredientes por Receita</h1>
+
+        <label for="receita">Selecione a Receita:</label>
+        <select id="receita" onchange="loadIngredientesReceita()">
+            <!-- Receitas serão carregadas aqui -->
+        </select>
+
+        <label for="ingrediente">Selecione o Ingrediente:</label>
+        <select id="ingrediente">
+            <!-- Ingredientes serão carregados aqui -->
+        </select>
+
+        <label for="quantidade">Quantidade:</label>
+        <input type="number" id="quantidade" step="0.01" placeholder="Ex: 1.5">
+
+        <button type="button" onclick="addIngredienteReceita()">Adicionar Ingrediente</button>
+
+        <h3>Ingredientes da Receita Selecionada</h3>
+        <table id="ingredientes-receita-table">
+            <thead>
+                <tr>
+                    <th>Ingrediente</th>
+                    <th>Quantidade</th>
+                    <th>Preço Atual</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Ingredientes da receita serão carregados aqui -->
+            </tbody>
+        </table>
+
+        <div class="messages">
+            <div class="error-message" id="errorMessageIngredienteReceita"></div>
+            <div class="success-message" id="successMessageIngredienteReceita"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================
+        // INÍCIO DA SEÇÃO FUNCIONAL: Definições de URLs e Cabeçalhos
+        // ============================
+        const receitaUrl = 'https://nocodb.assistent.top/api/v2/tables/mnklguzjsmu56ea/records';
+        const ingredientesUrl = 'https://nocodb.assistent.top/api/v2/tables/ma5h6s3t4mnew4o/records';
+        const ingredientesReceitaUrl = 'https://nocodb.assistent.top/api/v2/tables/m6zy79dukvcnxat/records';
+        const headers = {
+            'xc-token': '-0lFXFQGwV1Pk63NnjJasiaYJJCalhJua4FmoflZ',
+            'Content-Type': 'application/json'
+        };
+        // ============================
+        // FIM DA SEÇÃO FUNCIONAL
+        // ============================
+
+        // ============================
+        // INÍCIO DA SEÇÃO FUNCIONAL: Carregamento de Receitas
+        // ============================
+        document.addEventListener('DOMContentLoaded', function() {
+            loadReceitas();
+            loadIngredientes();
+        });
+
+        async function loadReceitas() {
+            try {
+                const response = await fetch(receitaUrl, { headers: headers });
+                const data = await response.json();
+
+                const receitaSelect = document.getElementById('receita');
+                receitaSelect.innerHTML = '<option value="">Selecione uma receita</option>';
+                data.list.forEach(receita => {
+                    const option = document.createElement('option');
+                    option.value = receita.nome;
+                    option.textContent = receita.nome;
+                    receitaSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar receitas:', error);
+            }
+        }
+        // ============================
+        // FIM DA SEÇÃO FUNCIONAL
+        // ============================
+
+        // ============================
+        // INÍCIO DA SEÇÃO FUNCIONAL: Carregamento de Ingredientes
+        // ============================
+        async function loadIngredientes() {
+            try {
+                const response = await fetch(ingredientesUrl, { headers: headers });
+                const data = await response.json();
+
+                const ingredienteSelect = document.getElementById('ingrediente');
+                ingredienteSelect.innerHTML = '<option value="">Selecione um ingrediente</option>';
+                data.list.forEach(ingrediente => {
+                    const option = document.createElement('option');
+                    option.value = ingrediente.Id;
+                    option.textContent = ingrediente.nome;
+                    ingredienteSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar ingredientes:', error);
+            }
+        }
+        // ============================
+        // FIM DA SEÇÃO FUNCIONAL
+        // ============================
+
+        // ============================
+        // INÍCIO DA SEÇÃO FUNCIONAL: Carregamento de Ingredientes da Receita Selecionada
+        // ============================
+        async function loadIngredientesReceita() {
+            const receitaNome = document.getElementById('receita').value;
+            if (!receitaNome) {
+                document.getElementById('ingredientes-receita-table').getElementsByTagName('tbody')[0].innerHTML = '';
+                return;
+            }
+
+            try {
+                const response = await fetch(ingredientesReceitaUrl, { headers: headers });
+                const data = await response.json();
+
+                const ingredientesReceitaTableBody = document.getElementById('ingredientes-receita-table').getElementsByTagName('tbody')[0];
+                ingredientesReceitaTableBody.innerHTML = '';
+
+                // Filtra os ingredientes pelo nome da receita
+                const ingredientes = data.list.filter(item => item["nome (from receitas)"][0] === receitaNome);
+
+                if (ingredientes.length > 0) {
+                    ingredientes.forEach(item => {
+                        const row = ingredientesReceitaTableBody.insertRow();
+                        row.innerHTML = `
+                            <td>${item["nome (from ingredientes)"][0]}</td>
+                            <td>${item.quantidade}</td>
+                            <td>${item["preco_atual (from ingredientes)"][0]}</td>
+                            <td><button type="button" onclick="removeIngredienteReceita(${item.Id})">Remover</button></td>
+                        `;
+                    });
+                } else {
+                    ingredientesReceitaTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum ingrediente encontrado para esta receita.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar ingredientes da receita:', error);
+                showMessageIngredienteReceita('Erro ao carregar ingredientes da receita: ' + error.message, 'error');
+            }
+        }
+        // ============================
+        // FIM DA SEÇÃO FUNCIONAL
+        // ============================
+
+        // ============================
+        // INÍCIO DA SEÇÃO FUNCIONAL: Adição de Ingrediente à Receita Selecionada (CORRIGIDO)
+        // ============================
+        async function addIngredienteReceita() {
+            const receitaNome = document.getElementById('receita').value;
+            const ingredienteId = document.getElementById('ingrediente').value;
+            const quantidade = document.getElementById('quantidade').value;
+
+            if (!receitaNome || !ingredienteId || !quantidade) {
+                showMessageIngredienteReceita('Por favor, selecione uma receita, um ingrediente e insira a quantidade.', 'error');
+                return;
+            }
+
+            // Obtenha o ID da receita baseado no nome
+            const receitaResponse = await fetch(`${receitaUrl}?where=nome,eq,${receitaNome}`, { headers: headers });
+            const receitaData = await receitaResponse.json();
+            const receitaId = receitaData.list[0].Id; // Obtém o ID da receita
+
+            const ingredienteReceitaData = {
+                quantidade: parseFloat(quantidade),
+                ingredientes_id: parseInt(ingredienteId),
+                receitas_id: receitaId
+            };
+
+            try {
+                const response = await fetch(ingredientesReceitaUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(ingredienteReceitaData)
+                });
+
+                if (response.ok) {
+                    showMessageIngredienteReceita('Ingrediente adicionado à receita com sucesso!', 'success');
+                    loadIngredientesReceita(); // Recarrega a lista de ingredientes da receita
+                } else {
+                    const errorData = await response.json();
+                    showMessageIngredienteReceita('Erro ao adicionar ingrediente: ' + JSON.stringify(errorData), 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao adicionar ingrediente à receita:', error);
+                showMessageIngredienteReceita('Erro ao adicionar ingrediente: ' + error.message, 'error');
+            }
+        }
+        // ============================
+        // FIM DA SEÇÃO FUNCIONAL
+        // ============================
+
+        // ============================
+        // INÍCIO DA SEÇÃO FUNCIONAL: Remoção de Ingrediente
+        // ============================
+        async function removeIngredienteReceita(id) {
+            try {
+                const response = await fetch(ingredientesReceitaUrl, {
+                    method: 'DELETE',
+                    headers: headers,
+                    body: JSON.stringify({ "Id": id })
+                });
+
+                if (response.ok) {
+                    showMessageIngredienteReceita('Ingrediente removido com sucesso!', 'success');
+                    loadIngredientesReceita(); // Recarrega a lista de ingredientes da receita
+                } else {
+                    const errorData = await response.json();
+                    showMessageIngredienteReceita('Erro ao remover ingrediente: ' + JSON.stringify(errorData), 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao remover ingrediente:', error);
+                showMessageIngredienteReceita('Erro ao remover ingrediente: ' + error.message, 'error');
+            }
+        }
+        // ============================
+        // FIM DA SEÇÃO FUNCIONAL
+        // ============================
+
+        // ============================
+        // INÍCIO DA SEÇÃO FUNCIONAL: Exibição de Mensagens
+        // ============================
+        function showMessageIngredienteReceita(message, type) {
+            const errorMessage = document.getElementById('errorMessageIngredienteReceita');
+            const successMessage = document.getElementById('successMessageIngredienteReceita');
+            if (type === 'success') {
+                errorMessage.textContent = '';
+                successMessage.textContent = message;
+            } else {
+                successMessage.textContent = '';
+                errorMessage.textContent = message;
+            }
+        }
+        // ============================
+        // FIM DA SEÇÃO FUNCIONAL
+        // ============================
+
+    </script>
+</body>
+</html>
